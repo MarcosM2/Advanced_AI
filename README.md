@@ -4,7 +4,7 @@ PERCI is an AI-powered kiosk assistant that uses:
 
 - YOLO (Ultralytics) for real-time person detection  
 - Whisper for speech recognition  
-- Text-to-speech (Windows SAPI) for responses  
+- Text-to-speech for responses  
 
 The system detects when a user approaches, greets them, listens to their request, and responds interactively.
 
@@ -40,3 +40,16 @@ cd Advanced_AI
 setup.bat
 venv\Scripts\activate
 python main.py
+```
+## Quick Start (Linux/macOS)
+
+Use a terminal for setup.
+
+```bash
+git clone https://github.com/MarcosM2/Advanced_AI.git
+cd Advanced_AI
+chmod +x setup.sh
+./setup.sh
+source venv/bin/activate
+python main.py
+```
