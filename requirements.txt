@@ -4,3 +4,8 @@ numpy
 sounddevice
 openai-whisper
 torch
+pyttsx3
+llama-cpp-python
+huggingface_hub
+requests
+tqdm
