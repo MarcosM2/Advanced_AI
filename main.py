@@ -7,6 +7,10 @@ import subprocess
 import numpy as np
 import sounddevice as sd
 import whisper
+import sys
+import json
+import pyttsx3
+
 
 # Load the YOLO model
 model = YOLO("yolo11n.pt")
@@ -37,17 +41,44 @@ last_qualified_seen = 0 # Records last time a potential user was detected
 greeted = False # Keeps track of greetings so user is only greeted once
 hard_reset = False # To reset the system when a user is detected
 speech_process = None
+llm_process = None
+
+def start_llm():
+    global llm_process
+    # Avoid starting duplicate llm's
+    if llm_process is not None and llm_process.poll() is None:
+        return
+    
+    llm_process = subprocess.Popen(
+    [sys.executable, "llm_worker3.py"], # Ensure same python interpreter is running and start llm script
+    #Set up communication pipeline
+    stdin=subprocess.PIPE, # Send input to llm
+    stdout=subprocess.PIPE, # Read response from llm
+    stderr=subprocess.PIPE, #capture errors
+    text=True, # send everything as text
+    bufsize=1 # Line buffered (good for real time communication)
+    )
+    print("[LLM] Worker started") # Log
 
 def hard_reset_system():
-    global greeted, candidate_time, last_qualified_seen, is_listening, talk, hard_reset, speech_process
+    global greeted, candidate_time, last_qualified_seen, is_listening, talk, hard_reset, speech_process, llm_process, last_listen_time
+
+    # WAIT for any speech to finish first
+    while True:
+        with lock:
+            if not talk:
+                break
+        time.sleep(0.05)
 
     with lock:
         hard_reset = True
 
     sd.stop() # Stop the microphone
 
-    if speech_process is not None:
-        speech_process.terminate()
+    # if speech_process is not None:
+    #     speech_process.terminate()
+    if llm_process is not None:
+        llm_process.terminate()
 
     with lock:
         greeted = False
@@ -55,90 +86,79 @@ def hard_reset_system():
         last_qualified_seen = 0
         is_listening = False
         talk = False
+        speech_process = None
+        llm_process = None
+        last_listen_time = 0
 
     print ("[STATE] HARD RESET")
 
+def submit_llm_process(user_text: str):
+    global llm_process
 
-# Windows speech
-def _speak_windows(text: str):
-    global talk, speech_process, hard_reset
-    safe_text = text.replace("'", "''")
-    cmd = (
-        f"$voice = New-Object -ComObject SAPI.SpVoice; "
-        f"$voice.Speak('{safe_text}')"
-    )
+    # Avoid starting duplicate llm's
+    if llm_process is None or llm_process.poll() is not None:
+        start_llm()
+
+    # Convert text to json
+    payload = json.dumps({"text": user_text})
+    llm_process.stdin.write(payload + "\n") # Write message to llm, \n signal end of message
+    llm_process.stdin.flush() # Fiorce message to send immediately
+
+    output = llm_process.stdout.readline().strip() # Wait for return message from llm and remove whitespaces
+
+    # Leave function if system reset
+    with lock:
+        if hard_reset:
+            return
+        
+    # If no response is given from llm
+    if not output:
+        speak("Sorry, I could not process that request.")
+        return
+        
+    # Convert response back from json
+    data = json.loads(output)
+
+    # Speak response
+    if "response" in data:
+        speak(data["response"])
+    elif "error" in data:
+        print("[LLM ERROR]", data["error"])
+        speak("Sorry, I had trouble processing that request.")
+    else:
+        speak("Sorry, I had trouble processing that request.")
+
+def _speak_universal(text: str):
+    global talk, hard_reset
 
     with lock:
         if hard_reset:
             return
         talk = True
 
+    try:
+        engine = pyttsx3.init()  # <-- NEW: create fresh engine each time
+        engine.setProperty("rate", 170)
+        engine.setProperty("volume", 1.0)
 
-    speech_process = subprocess.Popen(
-        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-    speech_process.wait()
+        engine.say(text)
+        engine.runAndWait()
 
-    speech_process = None
-    talk = False
+    except Exception as e:
+        print("[TTS ERROR]", e)
 
-# Speech function
+    finally:
+        with lock:
+            talk = False
+
+
 def speak(text: str):
-    global talk
     with lock:
         if hard_reset:
             return
 
     print("[SPEAK]", text)
-    threading.Thread(target=_speak_windows, args=(text,), daemon=True).start()
-
-# # Whisper listening
-# def _listen_and_transcribe():
-#     global is_listening, last_listen_time, talk, user_left
-
-#     if user_left == True:
-#         user_left = False
-#         return
-
-#     while talk == True:
-#         time.sleep(0.05)
-
-#     try:
-#         print("[WHISPER] Listening...")
-#         audio = sd.rec(
-#             int(LISTEN_SECONDS * SAMPLE_RATE),
-#             samplerate=SAMPLE_RATE,
-#             channels=1,
-#             dtype="float32"
-#         )
-#         sd.wait()
-
-#         audio = np.squeeze(audio)
-
-#         print("[WHISPER] Transcribing...")
-#         result = whisper_model.transcribe(audio, fp16=False)
-#         text = result["text"].strip()
-
-#         if text:
-#             print(f"[USER SAID] {text}")
-#             talk = True
-#             speak(f"You said: {text}. This input will be fed into the LLM for directional advice. Thank you for using PERCI, if you are finished please leave the station and I will reset for the next user. If you have any further quastions please do not hesitate to ask.")
-#             _listen_and_transcribe()
-
-#         else:
-#             print("[USER SAID] No speech detected.")
-#             talk = True
-#             speak("Im sorry, I didint quite catch that, could you please repeat the sentence.")
-#             _listen_and_transcribe()
-
-#     except Exception as e:
-#         print(f"[WHISPER ERROR] {e}")
-#     finally:
-#         with lock:
-#             is_listening = False
-#             last_listen_time = time.time()
+    threading.Thread(target=_speak_universal, args=(text,), daemon=True).start()
 
 # Whisper listening
 def _listen_and_transcribe():
@@ -183,11 +203,20 @@ def _listen_and_transcribe():
 
         if text:
             print(f"[USER SAID] {text}")
+            submit_llm_process(text)
+
+            # wait until LLM speech finishes
+            while True:
+                with lock:
+                    if not talk:
+                        break
+                time.sleep(0.05)
+                time.sleep(0.2)
             speak(
-                f"You said: {text}. This input will be fed into the LLM for directional advice. "
                 "Thank you for using PERCI. If you are finished, please leave the station and I will reset for the next user. "
                 "If you have any further questions, please do not hesitate to ask."
             )
+
         else:
             print("[USER SAID] No speech detected.")
             speak("I'm sorry, I didn't quite catch that. Could you please repeat the sentence?")
@@ -331,4 +360,5 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
+    start_llm()
     main()
