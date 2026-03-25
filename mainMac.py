@@ -309,7 +309,7 @@ def main():
                 greeted = True
                 candidate_time = None
                 speak("Hello I am PERCI, an AI assistant designed to help you find your way around this building. Please tell me, where would you like to go?")
-                time.sleep(10)
+                time.sleep(11)
                 start_listening()
         else:
             candidate_time = None
