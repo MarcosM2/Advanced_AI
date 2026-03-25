@@ -125,7 +125,7 @@ for a, b, cost, instr in Edge_List:
 #   huggingface-cli download bartowski/Qwen2.5-1.5B-Instruct-GGUF \
 #       --include "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf" --local-dir ./models
 
-MODEL_PATH = "./models/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
+MODEL_PATH = "./models/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
 
 print("[LLM] Loading model...", file=sys.stderr, flush=True)
 llm = Llama(

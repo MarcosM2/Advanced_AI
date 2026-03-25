@@ -78,7 +78,7 @@ def hard_reset_system():
     )
 
     # Small delay to allow the TTS thread to start and set talk = True
-    time.sleep(0.2)
+    time.sleep(15)
 
     # Wait for the thank you message to finish
     while True:
@@ -132,6 +132,8 @@ def submit_llm_process(user_text: str):
 
     if "response" in data:
         speak(data["response"])
+        time.sleep(20)
+        hard_reset_system()
     elif "error" in data:
         print("[LLM ERROR]", data["error"])
         speak("Sorry, I had trouble processing that request.")
