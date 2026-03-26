@@ -43,6 +43,8 @@ python main.py
 ```
 ## Quick Start (Linux/macOS)
 
+### Note: Use mainMac.py when running on MacOS
+
 Use a terminal for setup.
 
 ```bash
