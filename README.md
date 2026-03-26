@@ -22,7 +22,7 @@ The system detects when a user approaches, greets them, listens to their request
 
 ## Requirements
 
-- Python 3.10 or 3.11 (recommended)  
+- Python 3.10 or Newer  
 - Webcam  
 - Microphone  
 - Windows or MacOS(for built-in text-to-speech)  
