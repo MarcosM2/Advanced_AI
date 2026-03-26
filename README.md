@@ -41,7 +41,7 @@ setup.bat
 venv\Scripts\activate
 python main.py
 ```
-## Quick Start (Linux/macOS)
+## Quick Start (macOS)
 
 ### Note: Use mainMac.py when running on MacOS
 
@@ -53,5 +53,5 @@ cd Advanced_AI
 chmod +x setup.sh
 ./setup.sh
 source venv/bin/activate
-python main.py
+python mainMac.py
 ```
