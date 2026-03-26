@@ -25,7 +25,7 @@ The system detects when a user approaches, greets them, listens to their request
 - Python 3.10 or 3.11 (recommended)  
 - Webcam  
 - Microphone  
-- Windows (for built-in text-to-speech)  
+- Windows or MacOS(for built-in text-to-speech)  
 - FFmpeg installed and added to PATH  
 
 ---
