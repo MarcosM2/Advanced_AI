@@ -10,6 +10,7 @@ import whisper
 import sys
 import json
 import pyttsx3
+from collections import defaultdict
 
 
 # Load the YOLO model
@@ -26,95 +27,137 @@ HOLD_TIME = 3.0 # Time a potential user must wait before being considered a user
 RESET_TIME = 2.0 # Time after the user leaves before system resets
 
 # Whisper audio settings
-SAMPLE_RATE = 16000
-LISTEN_SECONDS = 4
-LISTEN_COOLDOWN = 6.0
+SAMPLE_RATE = 16000 # Microphone sample rate
+LISTEN_SECONDS = 4 # Whisper listening window
+LISTEN_COOLDOWN = 6.0 # minimum wait before listening again
 
-# Shared state for listening
-lock = threading.Lock()
-is_listening = False
-talk = False
-last_listen_time = 0.0
+
+lock = threading.Lock() # General shared lock state
+is_listening = False # Is a listening thread currently active?
+talk = False # is speech curently active?
+last_listen_time = 0.0 # timestamp of last listening cycle
+listen_thread = None # store current listening thread object
+session_id = 0 # Identify current session
+reset_in_progress = False # prevents overlapping resets
+pending_speeches = defaultdict(int) # counts how many speech tasks are still outstanding for a current session
+llm_lock = threading.Lock() # Guards LLM process access
+speech_lock = threading.Lock() # Only one TTS at a time
 
 candidate_time = None # Records time when a potential user was first detected
 last_qualified_seen = 0 # Records last time a potential user was detected
 greeted = False # Keeps track of greetings so user is only greeted once
 hard_reset = False # To reset the system when a user is detected
 speech_process = None
-llm_process = None
+llm_process = None 
 
 def start_llm():
     global llm_process
-    # Avoid starting duplicate llm's
-    if llm_process is not None and llm_process.poll() is None:
-        return
-    
-    llm_process = subprocess.Popen(
-    [sys.executable, "llm_worker3.py"], # Ensure same python interpreter is running and start llm script
-    #Set up communication pipeline
-    stdin=subprocess.PIPE, # Send input to llm
-    stdout=subprocess.PIPE, # Read response from llm
-    stderr=subprocess.PIPE, #capture errors
-    text=True, # send everything as text
-    bufsize=1 # Line buffered (good for real time communication)
-    )
+    with llm_lock:
+        # Avoid starting duplicate llm's
+        if llm_process is not None and llm_process.poll() is None:
+            return
+        
+        llm_process = subprocess.Popen(
+        [sys.executable, "llm_worker3.py"], # Ensure same python interpreter is running and start llm script
+        #Set up communication pipeline
+        stdin=subprocess.PIPE, # Send input to llm
+        stdout=subprocess.PIPE, # Read response from llm
+        stderr=subprocess.PIPE, #capture errors
+        text=True, # send everything as text
+        bufsize=1 # Line buffered (good for real time communication)
+        )
     print("[LLM] Worker started") # Log
 
-def hard_reset_system():
-    global greeted, candidate_time, last_qualified_seen, is_listening, talk, hard_reset, speech_process, llm_process, last_listen_time
+# Returns true if hard_reset and reset_in_progress is not active and expected_session matches session id
+# Basically used track if a session is active
+def _session_is_active(expected_session: int) -> bool:
+    return (not hard_reset) and (not reset_in_progress) and session_id == expected_session
 
-    # WAIT for any speech to finish first
+# cleanup function for speech
+def _finish_speech(request_session: int):
+    global talk
+
+    with lock:
+        pending_speeches[request_session] -= 1 # reduce count of pending speech by one
+        if pending_speeches[request_session] <= 0: # if not speech left in session
+            pending_speeches.pop(request_session, None) # Remove session from dictionary
+        talk = pending_speeches.get(session_id, 0) > 0 # stays true until session has no speech left
+
+# When user leaves reset session for next user
+def hard_reset_system():
+    global greeted, candidate_time, last_qualified_seen, is_listening, talk, hard_reset, speech_process, llm_process, last_listen_time, listen_thread, session_id, reset_in_progress
+
+    with lock:
+        # Prevent overlapping resets i.e. if reset already started do nothing
+        if reset_in_progress:
+            return
+        reset_in_progress = True
+        hard_reset = True
+        reset_session = session_id # Save session being reset
+    
+    sd.stop() # Stop the microphone
+
+    # update LLM variables to shut it off
+    with llm_lock:
+        proc = llm_process
+        llm_process = None
+
+    # Terminate LLM worker
+    if proc is not None and proc.poll() is None:
+        proc.terminate()
+
+    # Wait for any speech to finish first
     while True:
         with lock:
-            if not talk:
+            if pending_speeches.get(reset_session, 0) == 0:
                 break
         time.sleep(0.05)
 
+    # Reset all session states
     with lock:
-        hard_reset = True
-
-    sd.stop() # Stop the microphone
-
-    # if speech_process is not None:
-    #     speech_process.terminate()
-    if llm_process is not None:
-        llm_process.terminate()
-
-    with lock:
+        session_id += 1
         greeted = False
         candidate_time = None
         last_qualified_seen = 0
         is_listening = False
         talk = False
-        speech_process = None
-        llm_process = None
-        last_listen_time = 0
+        listen_thread = None
+        last_listen_time = 0.0
+        hard_reset = False
+        reset_in_progress = False
 
-    print ("[STATE] HARD RESET")
+    print ("[STATE] HARD RESET") # Log the hard reset in terminal
 
-def submit_llm_process(user_text: str):
+def submit_llm_process(user_text: str, request_session: int):
     global llm_process
 
-    # Avoid starting duplicate llm's
-    if llm_process is None or llm_process.poll() is not None:
+    with lock:
+        if not _session_is_active(request_session):
+            return
+        
+    try:
         start_llm()
+    except Exception as e:
+        print("[LLM START ERROR]", e)
+        speak("Sorry, I could not start the assistant.")
+        return
 
     # Convert text to json
     payload = json.dumps({"text": user_text})
+
     llm_process.stdin.write(payload + "\n") # Write message to llm, \n signal end of message
     llm_process.stdin.flush() # Fiorce message to send immediately
 
     output = llm_process.stdout.readline().strip() # Wait for return message from llm and remove whitespaces
 
-    # Leave function if system reset
-    with lock:
-        if hard_reset:
-            return
-        
     # If no response is given from llm
     if not output:
         speak("Sorry, I could not process that request.")
         return
+    
+    with lock:
+        if not _session_is_active(request_session):
+            return
         
     # Convert response back from json
     data = json.loads(output)
@@ -128,54 +171,56 @@ def submit_llm_process(user_text: str):
     else:
         speak("Sorry, I had trouble processing that request.")
 
-def _speak_universal(text: str):
+def _speak_universal(text: str, request_session: int):
     global talk, hard_reset
 
-    with lock:
-        if hard_reset:
-            return
-        talk = True
+    with speech_lock:
+        with lock:
+            should_skip = not _session_is_active(request_session)
 
-    try:
-        engine = pyttsx3.init()  # <-- NEW: create fresh engine each time
+        if should_skip:
+            _finish_speech(request_session)
+            return
+    
+        engine = pyttsx3.init()
         engine.setProperty("rate", 170)
         engine.setProperty("volume", 1.0)
-
         engine.say(text)
         engine.runAndWait()
 
-    except Exception as e:
-        print("[TTS ERROR]", e)
+        _finish_speech(request_session)
 
-    finally:
-        with lock:
-            talk = False
 
 
 def speak(text: str):
+    global talk
+
     with lock:
-        if hard_reset:
+        if hard_reset or reset_in_progress:
             return
+        request_session = session_id
+        pending_speeches[request_session] += 1
+        talk = True
 
     print("[SPEAK]", text)
-    threading.Thread(target=_speak_universal, args=(text,), daemon=True).start()
+    threading.Thread(target=_speak_universal, args=(text, request_session), daemon=True).start()
 
 # Whisper listening
-def _listen_and_transcribe():
-    global is_listening, last_listen_time
+def _listen_and_transcribe(request_session: int):
+    global is_listening, last_listen_time, listen_thread
     should_restart = False
 
     try:
         while True:
             with lock:
-                if hard_reset:
+                if not _session_is_active(request_session):
                     return
                 if not talk:
                     break
             time.sleep(0.05)
 
         with lock:
-            if hard_reset:
+            if not _session_is_active(request_session):
                 return
 
         print("[WHISPER] Listening...")
@@ -188,7 +233,7 @@ def _listen_and_transcribe():
         sd.wait()
 
         with lock:
-            if hard_reset:
+            if not _session_is_active(request_session):
                 return
 
         audio = np.squeeze(audio)
@@ -198,20 +243,21 @@ def _listen_and_transcribe():
         text = result["text"].strip()
 
         with lock:
-            if hard_reset:
+            if not _session_is_active(request_session):
                 return
 
         if text:
             print(f"[USER SAID] {text}")
-            submit_llm_process(text)
+            submit_llm_process(text, request_session)
 
             # wait until LLM speech finishes
             while True:
                 with lock:
+                    if not _session_is_active(request_session):
+                        return
                     if not talk:
                         break
                 time.sleep(0.05)
-                time.sleep(0.2)
             speak(
                 "Thank you for using PERCI. If you are finished, please leave the station and I will reset for the next user. "
                 "If you have any further questions, please do not hesitate to ask."
@@ -228,13 +274,15 @@ def _listen_and_transcribe():
 
     finally:
         with lock:
-            is_listening = False
-            last_listen_time = time.time()
+            if request_session == session_id:
+                is_listening = False
+                listen_thread = None
+                last_listen_time = time.time()
 
         if should_restart:
             while True:
                 with lock:
-                    if hard_reset:
+                    if not _session_is_active(request_session):
                         return
                     if not talk:
                         break
@@ -243,18 +291,20 @@ def _listen_and_transcribe():
             start_listening()
 
 def start_listening():
-    global is_listening
+    global is_listening, listen_thread
 
     with lock:
-        if hard_reset:
+        if hard_reset or reset_in_progress:
             return
-        if is_listening:
+        if is_listening and listen_thread is not None and listen_thread.is_alive():
             return
         if time.time() - last_listen_time < LISTEN_COOLDOWN:
             return
         is_listening = True
+        request_session = session_id
 
-    threading.Thread(target=_listen_and_transcribe, daemon=True).start()
+    listen_thread = threading.Thread(target=_listen_and_transcribe, args=(request_session,), daemon=True)
+    listen_thread.start()
 
     
 def main():
@@ -289,11 +339,6 @@ def main():
 
         # If statement to check if a valid potential user is detected
         if largest_box is not None and largest_area >= MIN_BOX_AREA:
-            with lock:
-                if hard_reset:
-                    hard_reset = False
-                    print(" [STATE] READY FOPR NEXT USER")
-
             last_qualified_seen = now # Store time last potewntial user was seen (updates every frame)
 
             if candidate_time is None: # Store time potewntial user first appears
@@ -301,7 +346,6 @@ def main():
 
             if not greeted and (now - candidate_time >= HOLD_TIME): # If potential user has been present for lonmg enough they are now a user, if system hasent greeted them already do so (Prompt LLM to greet user)
                 greeted = True
-                talk = True
                 candidate_time = None
                 speak("Hello I am PERCI, an AI assistant designed to help you find your way around this building. Please tell me, where would you like to go?")
                 start_listening()
@@ -354,8 +398,10 @@ def main():
     # Clean up
     sd.stop()
 
-    if speech_process is not None:
-        speech_process.terminate()
+    with llm_lock:
+        proc = llm_process
+    if proc is not None and proc.poll() is None:
+        proc.terminate()
     cap.release()
     cv2.destroyAllWindows()
 
