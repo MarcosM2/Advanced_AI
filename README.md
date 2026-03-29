@@ -10,8 +10,6 @@ PERCI is an AI-powered kiosk assistant that integrates:
 
 The system operates as a full interaction pipeline:
 
-The system operates as a full interaction pipeline:
-
 **User detection → Greeting → Speech input → LLM intent parsing → Pathfinding → Spoken directions → Automatic reset**
 
 PERCI is fully asynchronous and designed for real-time interaction.
