@@ -1,13 +1,17 @@
 # Advanced AI - PERCI
 
-PERCI is an AI-powered kiosk assistant that uses:
+PERCI is an AI-powered kiosk assistant that integrates:
 
-- YOLO (Ultralytics) for real-time person detection  
+- YOLO (Ultralytics) for real-time user detection  
 - Whisper for speech recognition  
-- Text-to-speech for responses  
+- A quantised LLM (Qwen 2.5 via llama-cpp) for natural language understanding  
+- A* pathfinding for computing optimal navigation routes  
+- Text-to-speech for spoken responses  
 
-The system detects when a user approaches, greets them, listens to their request, and responds interactively.
+The system operates as a full interaction pipeline:
 
+User detection → Greeting → Speech input → LLM intent parsing → Pathfinding → Spoken directions → Automatic reset
+The system is fully asynchronous and designed for real-time interaction.
 ---
 
 ## Features
@@ -15,8 +19,10 @@ The system detects when a user approaches, greets them, listens to their request
 - Real-time person detection using YOLO  
 - Voice input using Whisper  
 - Text-to-speech responses  
-- Automatic user detection and reset system  
-- Continuous interaction loop  
+- Automatic user detection and reset system
+- Natural language understanding using an LLM  
+- Pathfinding-based navigation using A* 
+- Continuous interaction loop 
 
 ---
 
