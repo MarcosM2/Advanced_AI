@@ -72,7 +72,7 @@ Node_List: Dict[str, Node] = {
     "comp_lab": Node("comp_lab", "Computer Lab 2.02", 11, 15),
     "2.03": Node("2.03", "Lecture Room 2.03", 19, 15),
     "2.04": Node("2.04", "Lecture Room 2.04", 20, 15),
-    "seminar_room": Node("seminar_room", "Seminar Room", 20, 14),
+    "seminar": Node("seminar", "Seminar Room", 20, 14),
         
     # Easter egg
     "francois": Node("francois", "François's office", 50, -50),
@@ -126,7 +126,7 @@ Edge_List = [
     
     # 2nd floor NE corner points
     ("ne_corner", "lab", 2, "The undergraduate lab will be on the right."),
-    ("ne_corner", "seminar_room", 1, "The seminar room will be on the right."),
+    ("ne_corner", "seminar", 1, "The seminar room will be on the right."),
     ("ne_corner", "2.04", 2, "Lecture Room 2.04 will be ahead to the right."),
     ("ne_corner", "2.03", 1, "Lecture Room 2.03 will be ahead on the left."),
     
@@ -152,7 +152,7 @@ Edge_List = [
     ("se_corner", "common_room", 4, "Turn to the left. The common room is directly ahead at the end of the corridor."),
     
     # Easter egg
-    ("entrance", "francois", 100, "François's office is an enigma and does not want to be found."),
+    ("entrance", "francois", 100, "François is an enigma of the mind and does not want to be found."),
 ]
 
 # Original node list
@@ -309,17 +309,17 @@ print("[LLM] Model ready", file=sys.stderr, flush=True)
     "jaynes": ["roderick jaynes", "doctor jaynes", "jaynes"],
 }'''
 
-DESTINATION_ALIASES: Dict[str, List[str]] = {
+DESTINATION_ALIASES: Dict[str, List[str]] = {    
     # Ground floor intermediate points
-    "doors_1": ["doors to the ground floor lobby"],
-    "doors_2": ["doors to the stairs"],
-    "lobby": ["lobby"],
+    #"doors_1": ["doors to the ground floor lobby"],
+    #"doors_2": ["doors to the stairs"],
+    #"lobby": ["lobby"],
         
-    "stairs_gf": ["ground floor stairs"],
-    "lift_gf": ["the ground floor lift"],
+    #"stairs_gf": ["ground floor stairs"],
+    #"lift_gf": ["the ground floor lift"],
     
     # Ground floor destinations
-    "entrance": ["entrance", "exit", "front entrance"],
+    #"entrance": ["entrance", "exit", "front entrance"],
     "reception": ["reception", "front desk"],
     "cafe": ["cafe", "coffee area", "coffee shop"],
     "it": ["service desk", "it"],
@@ -331,40 +331,39 @@ DESTINATION_ALIASES: Dict[str, List[str]] = {
     #"toilets_m_gf": ["men's toilet", "mens toilet", "male toilet", "gents toilet", "men's bathroom", "mens bathroom", "gents"],
     #"toilets_f_gf": ["women's toilet", "womens toilet", "female toilet", "ladies toilet", "women's bathroom", "womens bathroom", "ladies"],
     #"toilets_disabled": ["disabled toilet", "disabled bathroom", "disabled restroom"],
-        
-    # 2nd floor - add 20 to all horizontal X coordinates
+
     # 2nd floor intermediate points   
-    "stairs_2f": ["the second-floor stairs"],
-    "lift_2f": ["the second-floor lift"],
+    #"stairs_2f": ["the second-floor stairs"],
+    #"lift_2f": ["the second-floor lift"],
     
     # Define the corridor corners in clockwise order
-    "se_corner": ["the south-east corridor corner"],
-    "sw_corner": ["the south-west corridor corner"],
-    "nw_corner": ["the north-west corridor corner"],
-    "ne_corner": ["the north-east corridor corner"],
+    #"se_corner": ["the south-east corridor corner"],
+    #"sw_corner": ["the south-west corridor corner"],
+    #"nw_corner": ["the north-west corridor corner"],
+    #"ne_corner": ["the north-east corridor corner"],
     
     # 2nd floor destinations
     #"toilets_m_2f": ["men's toilet", "mens toilet", "male toilet", "gents toilet", "men's bathroom", "mens bathroom", "gents"],
     "common_room": ["2.16", "common room", "common room 2.16"],
-    "meeting_room": ["Meeting Room 2.17"],
+    "meeting_room": ["meeting room 2.17", "meeting room"],
     "2.18": ["hot desk 2.18"],
-    "2.19": ["2.19"],
-    "2.20": ["2.20"],
-    "lab": ["undergraduate lab 2.15"],
-    "mail_room": ["mail room 2.22"],
-    "2.23": ["2.23"],
+    "2.19": ["2.19", "office 2.19"],
+    "2.20": ["2.20", "office 2.20"],
+    "lab": ["undergraduate lab 2.15", "undergraduate lab"],
+    "mail_room": ["mail room 2.22", "mail room"],
+    "2.23": ["2.23", "office 2.23"],
     "2.24": ["eugene", "o'rourke", "2.24", "eugene o'rourke 2.24"],
-    "cadlab": ["cadlab", "2.28"],
+    "cadlab": ["cadlab", "cad lab", "2.28"],
     "2.25": ["2.25", "senior room", "senior room 2.25"],
-    "2.26": ["2.26"],
-    "2.27": ["2.27"],
+    "2.26": ["2.26", "office 2.26"],
+    "2.27": ["2.27", "office 2.27"],
     "project_space": ["project space", "2.31", "project space 2.31"],
     "workshop": ["workshop", "2.30", "workshop 2.30"],
     "comp_lab": ["computer", "computer lab", "comp lab", "2.02", "computer lab 2.02"],
     "2.03": ["2.03", "lecture room 2.03"],
     "2.04": ["2.04", "lecture room 2.04"],
-    "seminar_room": ["seminar room", "seminar"],
-            
+    "seminar": ["seminar room", "seminar"],
+
     # Easter egg
     "francois": ["francois", "françois", "françois's office"],
 }
@@ -574,7 +573,7 @@ Return JSON only."""
     if parsed is None:
         print(f"[LLM] Bad output, using fallback. Raw: {raw!r}", file=sys.stderr)
         return fallback_intent_parser(question)
-
+    
     intent = parsed.get("intent")
     destination_id = parsed.get("destination_id")
     needs_clarification = bool(parsed.get("needs_clarification", False))
