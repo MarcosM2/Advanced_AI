@@ -17,8 +17,146 @@ class Node:
         self.x = x
         self.y = y
 
-
 Node_List: Dict[str, Node] = {
+    # Ground floor intermediate points
+    "doors_1": Node("doors_1", "doors to the ground floor lobby", -2, 6),
+    "doors_2": Node("doors_2", "doors to the stairs", -2, 10),
+    "lobby": Node("lobby", "lobby", -2, 0),
+    
+    "stairs_gf": Node("stairs_gf", "the stairs", -2, 12),
+    "lift_gf": Node("lift_gf", "the lift", 0, 12),
+    
+    # Ground floor destinations
+    "entrance": Node("entrance", "entrance", 0, 0),
+    "reception": Node("reception", "Reception", -4, 2),
+    "cafe": Node("cafe", "café", -8, 0),
+    "it": Node("it", "Service Desk", -1, 4),
+    "0.09": Node("0.09", "Lecture Room 0.09", -4, 6),
+    "0.12": Node("0.12", "AAP 0.12", -6, 6),
+    "0.13": Node("0.13", "Server Room 0.13", -6, 8),
+    
+    #"toilets_f_gf": Node("toilets_f_gf", "women's toilets", -1, 10),
+    #"toilets_m_gf": Node("toilets_m_gf", "men's toilets", 0, 10),
+    #"toilets_disabled": Node("toilets_disabled", "disabled toilets", 0, 11),
+    "toilet": Node("toilet", "toilets", 0, 10),
+        
+    # 2nd floor - add 20 to all horizontal X coordinates
+    # 2nd floor intermediate points   
+    "stairs_2f": Node("stairs_2f", "the stairs", 19, 12),
+    "lift_2f": Node("lift_2f", "the lift", 20, 12),
+    
+    # Define the corridor corners in clockwise order
+    #"top_stairs_2f": Node("top_stairs_2f", "the stairs area", 19, 12),
+    "se_corner": Node("se_corner", "the south-east corridor corner", 19, 1),
+    "sw_corner": Node("sw_corner", "the south-west corridor corner", 12, 1),
+    "nw_corner": Node("nw_corner", "the north-west corridor corner", 12, 14),
+    "ne_corner": Node("ne_corner", "the north-east corridor corner", 19, 14),
+    
+    # 2nd floor destinations
+    #"toilets_m_2f": Node("toilets_m_2f", "men's toilets", 20, 11),
+    "common_room": Node("2.16", "Common Room 2.16", 23, 1),
+    "meeting_room": Node("2.17", "Meeting Room 2.17", 22, 0),
+    "2.18": Node("2.18", "Hot Desk 2.18", 21, 0),
+    "2.19": Node("2.19", "Office 2.19", 20, 0),
+    "2.20": Node("2.20", "Office 2.20", 19, 0),
+    "lab": Node("2.15", "Undergraduate Lab 2.15", 20, 13),
+    "mail_room": Node("2.22", "Mail Room 2.22", 17, 0),
+    "2.23": Node("2.23", "Office 2.23", 16, 0),
+    "2.24": Node("2.24", "Eugene O'Rourke 2.24", 14, 0),
+    "cadlab": Node("cadlab", "Cad Lab 2.28", 12, 0),
+    "2.25": Node("2.25", "Senior Room 2.25", 13, 2),
+    "2.26": Node("2.26", "Office 2.26", 13, 8),
+    "2.27": Node("2.27", "Office 2.27", 13, 9),
+    "project_space": Node("project_space", "Project Space 2.31", 13, 13),
+    "workshop": Node("workshop", "Workshop 2.30", 11, 13),
+    "comp_lab": Node("comp_lab", "Computer Lab 2.02", 11, 15),
+    "2.03": Node("2.03", "Lecture Room 2.03", 19, 15),
+    "2.04": Node("2.04", "Lecture Room 2.04", 20, 15),
+    "seminar_room": Node("seminar_room", "Seminar Room", 20, 14),
+        
+    # Easter egg
+    "francois": Node("francois", "François's office", 50, -50),
+}
+
+Edge_List = [
+    # Ground floor
+    ("entrance", "lobby", 2, "From the entrance, walk forward into the lobby."),
+    ("entrance", "cafe", 8, "From the entrance, the cafe is directly in front of you."),
+    
+    ("lobby", "reception", 4, "The reception will be on your right-hand side."),
+    ("lobby", "it", 5, "Turning to the right, the service desk will be to your right down the corridor."),
+    ("lobby", "doors_1", 8, "Turning to the right, pass through the doors in front of you."),
+    
+    ("doors_1", "0.09", 2, "Turning left, Lecture Room 0.09 will be on the left."),
+    ("doors_1", "0.12", 4, "Turning left, AAP 0.12 will be in front of you."),
+    ("doors_1", "0.13", 6, "Turning left, server room 0.13 will be in front of you, to the right of AAP 0.12."),
+    ("doors_1", "doors_2", 4, "Continue forward through the doors in front of you."),
+
+    ("doors_2", "toilet", 1, "Turning to the right, the toilets are on the right."),
+    #("doors_2", "toilets_f_gf", 1, "Turning to the right, the women's toilets are on the right."),
+    #("doors_2", "toilets_m_gf", 2, "Turning to the right, the men's toilets are on the right, past the women's toilets."),
+    #("doors_2", "toilets_disabled", 3, "Turning to the right, the disabled toilets are in front of you."),
+    ("doors_2", "stairs_gf", 2, "Take a dogleg to the right to the stairs."),
+    ("doors_2", "lift_gf", 4, "Turning to the right, the lift will be beside the disabled toilets."),
+    
+    # Stairs/lift between ground floor and 2nd floor
+    ("stairs_gf", "stairs_2f", 20, "Go up the stairs to the 2nd floor."),
+    ("lift_gf", "lift_2f", 20, "Go up the lift to the 2nd floor."),
+    
+    # 2nd floor
+    #("stairs_2f", "toilets_m_2f", 3, "The men's toilets will be on the left."),
+    ("stairs_2f", "se_corner", 12, "Continue through the two sets of doors in front of you."),
+    ("stairs_2f", "ne_corner", 3, "Turn to the left, then continue through the doors to your left."),
+    
+    #("lift_2f", "toilets_m_2f", 1, "The men's toilets will be on your left."),
+    ("lift_2f", "se_corner", 12, "Continue through the two sets of doors located to your left."),
+    ("lift_2f", "ne_corner", 3, "Turn to the left, then continue through the doors to your left."),
+    
+    # Corner-to-corner, clockwise:
+    ("se_corner", "sw_corner", 7, "Turn to the right, then continue through the two sets of doors in front of you."),
+    ("sw_corner", "nw_corner", 13, "Turn to the right, then continue down the corridor, through the door."),
+    ("nw_corner", "ne_corner", 7, "Turn to the right, then continue through both sets of doors ahead."),
+    ("ne_corner", "stairs_2f", 3, "Turn right, then continue through the stairs to the top of the stairs."),
+    
+    # Corner-to-corner, anti-clockwise:
+    ("ne_corner", "nw_corner", 7, "Turn to the left, then continue through the two sets of doors ahead."),
+    ("nw_corner", "sw_corner", 13, "Turn to the left, then continue down the corridor through the door."),
+    ("sw_corner", "se_corner", 7, "Turn to the left, then continue through both sets of doors in front of you."),
+    ("se_corner", "stairs_2f", 12, "Turn towards the two sets of doors and continue toward the stairs."),
+    
+    # 2nd floor NE corner points
+    ("ne_corner", "lab", 2, "The undergraduate lab will be on the right."),
+    ("ne_corner", "seminar_room", 1, "The seminar room will be on the right."),
+    ("ne_corner", "2.04", 2, "Lecture Room 2.04 will be ahead to the right."),
+    ("ne_corner", "2.03", 1, "Lecture Room 2.03 will be ahead on the left."),
+    
+    # 2nd floor NW corner points
+    ("nw_corner", "comp_lab", 2, "The computer lab will be in front of you."),
+    ("nw_corner", "workshop", 2, "Turn to the left. The workshop will be on the right around the corner."),
+    ("nw_corner", "project_space", 2, "Turn to the left. The project space will be on the left around the corner."),
+    ("nw_corner", "2.27", 6, "Turn to the left. Continue through the door. Office 2.27 will be on your left."),
+    ("nw_corner", "2.26", 7, "Turn to the left. Continue through the door. Office 2.26 will be on your left past 2.27."),
+    
+    # 2nd floor SW corner points
+    ("sw_corner", "2.24", 3, "Office 2.24 will be on your left immediately past the second door."),
+    ("sw_corner", "cadlab", 1, "The Cad Lab will be on your left past office 2.24."),
+    ("sw_corner", "2.25", 2, "Turn to the right. Office 2.25 will be on your right around the corner."),
+    
+    # 2nd floor SE corner points
+    ("se_corner", "2.23", 4, "Turn to the right and go through the door. Office 2.23 will be on your left past the mail room."),
+    ("se_corner", "mail_room", 3, "Turn to the right, continuing through the door. The mail room will be on your left."),
+    ("se_corner", "2.20", 1, "Office 2.20 will be directly in front of you."),
+    ("se_corner", "2.19", 2, "Turn to the left. Office 2.19 will be on the right past office 2.20."),
+    ("se_corner", "2.18", 3, "Turn to the left. The hot desk office, 2.18, will be on the right down the corridor."),
+    ("se_corner", "meeting_room", 4, "Turn to the left. The meeting room will be on the right at the end of the corridor."),
+    ("se_corner", "common_room", 4, "Turn to the left. The common room is directly ahead at the end of the corridor."),
+    
+    # Easter egg
+    ("entrance", "francois", 100, "François's office is an enigma and does not want to be found."),
+]
+
+# Original node list
+'''Node_List: Dict[str, Node] = {
     "entrance": Node("entrance", "Entrance", 0, 0),
     "lobby": Node("lobby", "Lobby", 0, 4),
     "reception": Node("reception", "Reception", 1, 4),
@@ -49,9 +187,9 @@ Node_List: Dict[str, Node] = {
     "nw_corridor": Node("nw_corridor", "North-West Corridor Corner", -6, 21),
     "ne_corridor": Node("ne_corridor", "North-East Corridor Corner", 6, 21),
     "se_corridor": Node("se_corridor", "South-East Corridor Corner", 6, 9),
-}
+}'''
 
-Edge_List = [
+'''Edge_List = [
     ("entrance", "lobby", 4, "From the entrance, walk forward into the lobby."),
     ("lobby", "entrance", 4, "With the reception on your left, the exit will be in front of you."),
     ("lobby", "reception", 1, "The reception will be on the right."),
@@ -108,7 +246,7 @@ Edge_List = [
     ("nw_corridor", "sw_corridor", 12, "Go down the corridor and turn left."),
     ("sw_corridor", "toilet_m", 4, "The men's toilets are on the right, past Doctor Jaynes' office."),
     ("sw_corridor", "doors", 6, "Go down the corridor, towards the doors to the lobby."),
-]
+]'''
 
 Graph: Dict[str, List[Tuple[str, float, str]]] = {nid: [] for nid in Node_List}
 for a, b, cost, instr in Edge_List:
@@ -142,7 +280,7 @@ print("[LLM] Model ready", file=sys.stderr, flush=True)
 # Building data
 # ---------------------------------------------------------------------------
 
-DESTINATION_ALIASES: Dict[str, List[str]] = {
+'''DESTINATION_ALIASES: Dict[str, List[str]] = {
     "entrance": ["entrance", "exit", "front entrance"],
     "lobby": ["lobby"],
     "reception": ["reception", "front desk"],
@@ -169,9 +307,70 @@ DESTINATION_ALIASES: Dict[str, List[str]] = {
     "plinge": ["walter plinge", "doctor plinge", "plinge"],
     "agnew": ["david agnew", "doctor agnew", "agnew"],
     "jaynes": ["roderick jaynes", "doctor jaynes", "jaynes"],
+}'''
+
+DESTINATION_ALIASES: Dict[str, List[str]] = {
+    # Ground floor intermediate points
+    "doors_1": ["doors to the ground floor lobby"],
+    "doors_2": ["doors to the stairs"],
+    "lobby": ["lobby"],
+        
+    "stairs_gf": ["ground floor stairs"],
+    "lift_gf": ["the ground floor lift"],
+    
+    # Ground floor destinations
+    "entrance": ["entrance", "exit", "front entrance"],
+    "reception": ["reception", "front desk"],
+    "cafe": ["cafe", "coffee area", "coffee shop"],
+    "it": ["service desk", "it"],
+    "0.09": ["lecture room 0.09"],
+    "0.12": ["0.12", "aap 0.12", "aap"],
+    "0.13": ["0.13", "server room 0.13", "server room"],
+
+    "toilet": ["toilet", "toilets"],
+    #"toilets_m_gf": ["men's toilet", "mens toilet", "male toilet", "gents toilet", "men's bathroom", "mens bathroom", "gents"],
+    #"toilets_f_gf": ["women's toilet", "womens toilet", "female toilet", "ladies toilet", "women's bathroom", "womens bathroom", "ladies"],
+    #"toilets_disabled": ["disabled toilet", "disabled bathroom", "disabled restroom"],
+        
+    # 2nd floor - add 20 to all horizontal X coordinates
+    # 2nd floor intermediate points   
+    "stairs_2f": ["the second-floor stairs"],
+    "lift_2f": ["the second-floor lift"],
+    
+    # Define the corridor corners in clockwise order
+    "se_corner": ["the south-east corridor corner"],
+    "sw_corner": ["the south-west corridor corner"],
+    "nw_corner": ["the north-west corridor corner"],
+    "ne_corner": ["the north-east corridor corner"],
+    
+    # 2nd floor destinations
+    #"toilets_m_2f": ["men's toilet", "mens toilet", "male toilet", "gents toilet", "men's bathroom", "mens bathroom", "gents"],
+    "common_room": ["2.16", "common room", "common room 2.16"],
+    "meeting_room": ["Meeting Room 2.17"],
+    "2.18": ["hot desk 2.18"],
+    "2.19": ["2.19"],
+    "2.20": ["2.20"],
+    "lab": ["undergraduate lab 2.15"],
+    "mail_room": ["mail room 2.22"],
+    "2.23": ["2.23"],
+    "2.24": ["eugene", "o'rourke", "2.24", "eugene o'rourke 2.24"],
+    "cadlab": ["cadlab", "2.28"],
+    "2.25": ["2.25", "senior room", "senior room 2.25"],
+    "2.26": ["2.26"],
+    "2.27": ["2.27"],
+    "project_space": ["project space", "2.31", "project space 2.31"],
+    "workshop": ["workshop", "2.30", "workshop 2.30"],
+    "comp_lab": ["computer", "computer lab", "comp lab", "2.02", "computer lab 2.02"],
+    "2.03": ["2.03", "lecture room 2.03"],
+    "2.04": ["2.04", "lecture room 2.04"],
+    "seminar_room": ["seminar room", "seminar"],
+            
+    # Easter egg
+    "francois": ["francois", "françois", "françois's office"],
 }
 
-TOILETS = ["toilet_m", "toilet_f"]
+#TOILETS = ["toilets_m_gf", "toilets_f_gf", "toilets_m_2f"]
+TOILETS = ["toilet"]
 
 ACCESSIBLE_KEYWORDS = [
     "accessible", "wheelchair", "step-free", "no stairs", "disabled access"
