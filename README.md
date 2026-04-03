@@ -30,11 +30,12 @@ PERCI is fully asynchronous and designed for real-time interaction.
 
 ## Requirements
 
-- Python 3.10 or Newer  
+- Python 3.10 or Newer. Download here: https://www.python.org/downloads/
 - Webcam  
 - Microphone  
 - Windows or MacOS
-- Git (for cloning the repository) 
+- Git (for cloning the repository). Download here: https://git-scm.com/install/windows
+- Microsoft C++ Build Tools. Download here: https://visualstudio.microsoft.com/visual-cpp-build-tools/
 
 ---
 
