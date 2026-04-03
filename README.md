@@ -43,6 +43,8 @@ PERCI is fully asynchronous and designed for real-time interaction.
 Use **Command Prompt (cmd)** for easiest setup.
 
 ```bash
+mkdir PERCI
+cd PERCI
 git clone https://github.com/MarcosM2/Advanced_AI.git
 cd Advanced_AI
 setup.bat
