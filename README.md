@@ -33,8 +33,8 @@ PERCI is fully asynchronous and designed for real-time interaction.
 - Python 3.10 or Newer  
 - Webcam  
 - Microphone  
-- Windows or MacOS(for built-in text-to-speech)  
-- FFmpeg installed and added to PATH  
+- Windows or MacOS
+- Git (for cloning the repository) 
 
 ---
 
