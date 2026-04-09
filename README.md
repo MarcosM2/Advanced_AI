@@ -40,7 +40,8 @@ Example interaction:
 5. It computes the optimal route using A* pathfinding
 6. It responds with spoken directions
 
-The system then resets automatically, ready for the next user.
+The system then resets automatically when a user leaves, and gets ready for the next user.
+Note: A valid user is considered close enough when their detected bounding box area is at least 120,000 pixels².
 
 ---
 
