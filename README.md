@@ -35,7 +35,7 @@ PERCI is an interactive AI kiosk assistant that detects users, listens to spoken
 Example interaction:
 1. A user approaches the kiosk → PERCI detects them using a webcam
 2. PERCI greets the user automatically
-3. The user asks: "Where is the nearest exit?"
+3. The user asks: "Where are the men's toilets?"
 4. PERCI processes the request using an LLM
 5. It computes the optimal route using A* pathfinding
 6. It responds with spoken directions
