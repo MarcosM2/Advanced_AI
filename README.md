@@ -49,7 +49,7 @@ The system then resets automatically, ready for the next user.
 - Python 3.10 or Newer. Download here: https://www.python.org/downloads/
 - Webcam  
 - Microphone  
-- Windows or MacOS
+- Windows or MacOS (Tried and tested on windows)
 - Git (for cloning the repository). Download here: https://git-scm.com/install/windows
 - Microsoft C++ Build Tools. Download here: https://visualstudio.microsoft.com/visual-cpp-build-tools/
 
