@@ -50,7 +50,7 @@ Note: A valid user is considered close enough when their detected bounding box a
 - Python 3.10 or Newer. Download here: https://www.python.org/downloads/
 - Webcam  
 - Microphone  
-- Windows or MacOS (Tried and tested on windows)
+- Windows or MacOS (Tried and tested on Windows)
 - Git (for cloning the repository). Download here: https://git-scm.com/install/windows
 - Microsoft C++ Build Tools. Download here: https://visualstudio.microsoft.com/visual-cpp-build-tools/
 
