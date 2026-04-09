@@ -47,7 +47,6 @@ candidate_time = None # Records time when a potential user was first detected
 last_qualified_seen = 0 # Records last time a potential user was detected
 greeted = False # Keeps track of greetings so user is only greeted once
 hard_reset = False # To reset the system when a user is detected
-speech_process = None
 llm_process = None 
 
 def start_llm():
@@ -85,7 +84,7 @@ def _finish_speech(request_session: int):
 
 # When user leaves reset session for next user
 def hard_reset_system():
-    global greeted, candidate_time, last_qualified_seen, is_listening, talk, hard_reset, speech_process, llm_process, last_listen_time, listen_thread, session_id, reset_in_progress
+    global greeted, candidate_time, last_qualified_seen, is_listening, talk, hard_reset, llm_process, last_listen_time, listen_thread, session_id, reset_in_progress
 
     with lock:
         # Prevent overlapping resets i.e. if reset already started do nothing
@@ -171,46 +170,57 @@ def submit_llm_process(user_text: str, request_session: int):
     else:
         speak("Sorry, I had trouble processing that request.")
 
+# Universal TTS (Works across platforms)
 def _speak_universal(text: str, request_session: int):
     global talk, hard_reset
 
+    # Make sure only one tts operation runs at a time
     with speech_lock:
+        # Check speak request belongs to acive session
         with lock:
             should_skip = not _session_is_active(request_session)
 
+        # If session is no longer valid, stop
         if should_skip:
             _finish_speech(request_session)
             return
-    
+        
+        # Initialising tts engine and config for speech
         engine = pyttsx3.init()
         engine.setProperty("rate", 170)
         engine.setProperty("volume", 1.0)
+        # Speak the generated response
         engine.say(text)
         engine.runAndWait()
 
         _finish_speech(request_session)
 
 
-
+# Start speech task in a background thread
 def speak(text: str):
     global talk
 
     with lock:
+        # Do not start speech during reset
         if hard_reset or reset_in_progress:
             return
+        # Assign this speech to the current session
         request_session = session_id
         pending_speeches[request_session] += 1
         talk = True
 
+    # Log speech in terminal
     print("[SPEAK]", text)
+    # Start tts in background thread
     threading.Thread(target=_speak_universal, args=(text, request_session), daemon=True).start()
 
-# Whisper listening
+# Whisper listening and transcribing function
 def _listen_and_transcribe(request_session: int):
     global is_listening, last_listen_time, listen_thread
     should_restart = False
 
     try:
+        # Wait until system is not talking before listening
         while True:
             with lock:
                 if not _session_is_active(request_session):
@@ -219,10 +229,12 @@ def _listen_and_transcribe(request_session: int):
                     break
             time.sleep(0.05)
 
+        # Before recording, check ssession is valid
         with lock:
             if not _session_is_active(request_session):
                 return
-
+            
+        # Log state in terminal and start recording from microphone
         print("[WHISPER] Listening...")
         audio = sd.rec(
             int(LISTEN_SECONDS * SAMPLE_RATE),
@@ -232,21 +244,25 @@ def _listen_and_transcribe(request_session: int):
         )
         sd.wait()
 
+        # Check session is still the same after recording, if not exit
         with lock:
             if not _session_is_active(request_session):
                 return
 
         audio = np.squeeze(audio)
 
+        # Log state in terminal and start transcribing with whisper
         print("[WHISPER] Transcribing...")
         result = whisper_model.transcribe(audio, fp16=False)
         text = result["text"].strip()
 
+        # Check session is still the same after transcribing, if not exit
         with lock:
             if not _session_is_active(request_session):
                 return
-
+            
         if text:
+            # Log user input in terminal and send to llm for processing
             print(f"[USER SAID] {text}")
             submit_llm_process(text, request_session)
 
@@ -258,28 +274,33 @@ def _listen_and_transcribe(request_session: int):
                     if not talk:
                         break
                 time.sleep(0.05)
+            # Goodbye prompt for user
             speak(
                 "Thank you for using PERCI. If you are finished, please leave the station and I will reset for the next user. "
                 "If you have any further questions, please do not hesitate to ask."
             )
 
         else:
+            # Log no speech detected and prompt user to try again, then restart listening process
             print("[USER SAID] No speech detected.")
             speak("I'm sorry, I didn't quite catch that. Could you please repeat the sentence?")
 
         should_restart = True
 
     except Exception as e:
+        # Log any Whisper errors
         print(f"[WHISPER ERROR] {e}")
 
     finally:
         with lock:
+            # update listening state for this session
             if request_session == session_id:
                 is_listening = False
                 listen_thread = None
                 last_listen_time = time.time()
 
         if should_restart:
+            # Wait until system is not talking before listening again
             while True:
                 with lock:
                     if not _session_is_active(request_session):
@@ -287,28 +308,32 @@ def _listen_and_transcribe(request_session: int):
                     if not talk:
                         break
                 time.sleep(0.05)
-
+            # Restart listening cycle
             start_listening()
 
 def start_listening():
     global is_listening, listen_thread
 
     with lock:
-        if hard_reset or reset_in_progress:
-            return
+        # Check if system is currently resetting or has enetered a hard reset state
+        if hard_reset or reset_in_progress: 
+            return # Exit
+        # Prevents duplicate listening threads
         if is_listening and listen_thread is not None and listen_thread.is_alive():
-            return
+            return # Exit, listening alaready in progress
+        # Make sure cooldown time has passed before listening again
         if time.time() - last_listen_time < LISTEN_COOLDOWN:
-            return
-        is_listening = True
-        request_session = session_id
+            return # Exit
+        is_listening = True # System currently listening
+        request_session = session_id # Store session id to listening request
 
+    # Background Thread
     listen_thread = threading.Thread(target=_listen_and_transcribe, args=(request_session,), daemon=True)
     listen_thread.start()
 
     
 def main():
-    global greeted, candidate_time, last_qualified_seen, talk, user_left, hard_reset
+    global greeted, candidate_time, last_qualified_seen, talk, hard_reset
     # Main loop, runs continuously until quit
     while True:
         # Read a frame from the camera, ret says if this was successful and frame is the image
