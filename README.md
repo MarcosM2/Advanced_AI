@@ -56,6 +56,22 @@ Note: A valid user is considered close enough when their detected bounding box a
 
 ---
 
+## Dataset & Custom Environments
+
+PERCI is designed to be adaptable to new environments.
+
+For more information on the dataset structure and how to create your own building maps for use with PERCI, please refer to the `README.md` located in the `dataset` folder.
+
+This documentation includes:
+- Node and edge definitions  
+- Graph-based navigation structure  
+- Destination alias handling for natural language queries  
+- Guidance on adapting PERCI to new environments  
+
+The provided dataset demonstrates how real-world indoor spaces can be represented as a graph, enabling PERCI to generate human-like navigation instructions.
+
+---
+
 ## Quick Start (Windows)
 
 Use **Command Prompt (cmd)** for easiest setup.
